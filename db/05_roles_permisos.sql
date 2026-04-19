@@ -1,10 +1,16 @@
+CREATE USER veterinaria WITH PASSWORD 'veterinari@2026';
+GRANT CONNECT ON DATABASE clinica_vet TO veterinaria;
+GRANT USAGE ON SCHEMA public TO veterinaria;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO veterinaria;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO veterinaria;
+
 CREATE ROLE veterinario;
 CREATE ROLE recepcionista;
 CREATE ROLE admin;
 
 GRANT SELECT ON mascotas TO veterinario;
 GRANT SELECT, UPDATE ON citas TO veterinario;
-GRANT SELECT, INSERT ON vet_atiende_mascotas TO veterinario;
+GRANT SELECT, INSERT ON vet_atiende_mascota TO veterinario;
 GRANT SELECT, INSERT ON vacunas_aplicadas TO veterinario;
 
 GRANT SELECT ON mascotas TO recepcionista;
