@@ -1,65 +1,74 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+const VETERINARIOS = [
+  { id: 1, nombre: 'Dr. Fernando López Castro' },
+  { id: 2, nombre: 'Dra. Sofía García Velasco' },
+  { id: 3, nombre: 'Dr. Andrés Méndez Bravo' },
+];
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [rol, setRol] = useState('recepcionista');
+  const [vetId, setVetId] = useState('1');
+
+  function handleEntrar() {
+    localStorage.setItem('rol', rol);
+    localStorage.setItem('vetId', vetId);
+    router.push('/mascotas');
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen flex items-center justify-center bg-zinc-50">
+      <div className="bg-white rounded-xl shadow p-8 w-full max-w-sm flex flex-col gap-6">
+        <h1 className="text-2xl font-semibold text-zinc-800">
+          Clínica Veterinaria
+        </h1>
+        <p className="text-sm text-zinc-500">
+          Selecciona tu rol para continuar
+        </p>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-zinc-700">Rol</label>
+          <select
+            value={rol}
+            onChange={e => setRol(e.target.value)}
+            className="border border-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <option value="recepcionista">Recepcionista</option>
+            <option value="veterinario">Veterinario</option>
+            <option value="admin">Administrador</option>
+          </select>
         </div>
-      </main>
-    </div>
+
+        {rol === 'veterinario' && (
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-zinc-700">
+              Veterinario
+            </label>
+            <select
+              value={vetId}
+              onChange={e => setVetId(e.target.value)}
+              className="border border-zinc-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"
+            >
+              {VETERINARIOS.map(v => (
+                <option key={v.id} value={String(v.id)}>
+                  {v.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <button
+          onClick={handleEntrar}
+          className="bg-zinc-800 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-zinc-700 transition-colors"
+        >
+          Entrar
+        </button>
+      </div>
+    </main>
   );
 }
