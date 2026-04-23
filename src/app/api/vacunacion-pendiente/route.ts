@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import redis from '@/lib/redis';
-
+import { getRolePg } from '@/lib/auth';
 
 const CACHE_KEY = 'vacunacion_pendiente';
 const CACHE_TTL = 300; 
@@ -14,33 +14,47 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-
     const cached = await redis.get(CACHE_KEY);
 
     if (cached) {
       console.log('[CACHE HIT] vacunacion_pendiente');
       return NextResponse.json({
         mascotas: JSON.parse(cached),
-        fuente: 'cache',  
+        fuente: 'cache',
       });
     }
 
     console.log('[CACHE MISS] vacunacion_pendiente — consultando BD');
     const inicio = Date.now();
 
-    const result = await pool.query(
-      `SELECT * FROM v_mascotas_vacunacion_pendiente ORDER BY nombre`
-    );
+    const client = await pool.connect();
 
-    const ms = Date.now() - inicio;
-    console.log(`[BD] vacunacion_pendiente completada en ${ms}ms`);
+    try {
+      await client.query('BEGIN');
+      await client.query(`SET LOCAL ROLE ${getRolePg(rol)}`);
 
-    await redis.setex(CACHE_KEY, CACHE_TTL, JSON.stringify(result.rows));
+      const result = await client.query(
+        `SELECT * FROM v_mascotas_vacunacion_pendiente ORDER BY nombre`
+      );
 
-    return NextResponse.json({
-      mascotas: result.rows,
-      fuente: 'base_de_datos',
-    });
+      await client.query('COMMIT');
+
+      const ms = Date.now() - inicio;
+      console.log(`[BD] vacunacion_pendiente completada en ${ms}ms`);
+
+      await redis.setex(CACHE_KEY, CACHE_TTL, JSON.stringify(result.rows));
+
+      return NextResponse.json({
+        mascotas: result.rows,
+        fuente: 'base_de_datos',
+      });
+
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
 
   } catch (err) {
     console.error('[GET /api/vacunacion-pendiente] Error:', err);

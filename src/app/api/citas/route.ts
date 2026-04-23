@@ -5,10 +5,18 @@ import type { CitaBody } from '@/types';
 
 export async function POST(req: NextRequest) {
   const rol = req.headers.get('x-rol') ?? '';
-  const vetId = req.headers.get('x-vet-id') ?? '';
+  const vetIdRaw = req.headers.get('x-vet-id') ?? '';
 
   if (!['veterinario', 'recepcionista'].includes(rol)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  }
+
+  let vetIdNum: number | null = null;
+  if (rol === 'veterinario') {
+    vetIdNum = parseInt(vetIdRaw, 10);
+    if (isNaN(vetIdNum) || vetIdNum <= 0 || String(vetIdNum) !== vetIdRaw.trim()) {
+      return NextResponse.json({ error: 'x-vet-id inválido' }, { status: 400 });
+    }
   }
 
   let body: CitaBody;
@@ -18,10 +26,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 });
   }
 
-  const mascotaId = Number(body.mascota_id);
+  const mascotaId    = Number(body.mascota_id);
   const veterinarioId = Number(body.veterinario_id);
-  const motivo = String(body.motivo ?? '').slice(0, 500);
-  const fechaHora = body.fecha_hora;
+  const motivo       = String(body.motivo ?? '').slice(0, 500);
+  const fechaHora    = body.fecha_hora;
 
   if (!Number.isInteger(mascotaId) || mascotaId <= 0) {
     return NextResponse.json({ error: 'mascota_id inválido' }, { status: 400 });
@@ -39,8 +47,11 @@ export async function POST(req: NextRequest) {
     await client.query('BEGIN');
     await client.query(`SET LOCAL ROLE ${getRolePg(rol)}`);
 
-    if (rol === 'veterinario' && vetId) {
-      await client.query(`SET LOCAL app.current_vet_id = '${vetId}'`);
+    if (rol === 'veterinario' && vetIdNum !== null) {
+      await client.query('SELECT set_config($1, $2, true)', [
+        'app.current_vet_id',
+        String(vetIdNum),
+      ]);
     }
 
     const result = await client.query(

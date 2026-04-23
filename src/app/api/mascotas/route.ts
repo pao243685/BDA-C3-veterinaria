@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { getRolePg } from '@/lib/auth';  
+import { getRolePg } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const nombre = searchParams.get('nombre') ?? '';
-  const rol = req.headers.get('x-rol') ?? '';
-  const vetId = req.headers.get('x-vet-id') ?? '';
+  const nombre    = searchParams.get('nombre') ?? '';
+  const rol       = req.headers.get('x-rol') ?? '';
+  const vetIdRaw  = req.headers.get('x-vet-id') ?? '';
+
+  let vetIdNum: number | null = null;
+  if (rol === 'veterinario') {
+    vetIdNum = parseInt(vetIdRaw, 10);
+    if (isNaN(vetIdNum) || vetIdNum <= 0 || String(vetIdNum) !== vetIdRaw.trim()) {
+      return NextResponse.json({ error: 'x-vet-id inválido' }, { status: 400 });
+    }
+  }
 
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
-    await client.query(`SET LOCAL ROLE ${getRolePg(rol)}`); 
+    await client.query(`SET LOCAL ROLE ${getRolePg(rol)}`);
 
-    if (rol === 'veterinario' && vetId) {
-      await client.query(`SET LOCAL app.current_vet_id = '${vetId}'`);
+    if (rol === 'veterinario' && vetIdNum !== null) {
+      await client.query('SELECT set_config($1, $2, true)', [
+        'app.current_vet_id',
+        String(vetIdNum),
+      ]);
     }
 
     const result = await client.query(

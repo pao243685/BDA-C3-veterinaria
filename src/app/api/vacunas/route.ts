@@ -7,11 +7,16 @@ import type { VacunaBody } from '@/types';
 const CACHE_KEY = 'vacunacion_pendiente';
 
 export async function POST(req: NextRequest) {
-  const rol = req.headers.get('x-rol') ?? '';
-  const vetId = req.headers.get('x-vet-id') ?? '';
+  const rol      = req.headers.get('x-rol') ?? '';
+  const vetIdRaw = req.headers.get('x-vet-id') ?? '';
 
   if (rol !== 'veterinario') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+  }
+
+  const vetIdNum = parseInt(vetIdRaw, 10);
+  if (isNaN(vetIdNum) || vetIdNum <= 0 || String(vetIdNum) !== vetIdRaw.trim()) {
+    return NextResponse.json({ error: 'x-vet-id inválido' }, { status: 400 });
   }
 
   let body: VacunaBody;
@@ -21,10 +26,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 });
   }
 
-  const mascotaId = Number(body.mascota_id);
-  const vacunaId = Number(body.vacuna_id);
+  const mascotaId     = Number(body.mascota_id);
+  const vacunaId      = Number(body.vacuna_id);
   const veterinarioId = Number(body.veterinario_id);
-  const costoCobrado = Number(body.costo_cobrado ?? 0);
+  const costoCobrado  = Number(body.costo_cobrado ?? 0);
 
   if (!Number.isInteger(mascotaId) || mascotaId <= 0) {
     return NextResponse.json({ error: 'mascota_id inválido' }, { status: 400 });
@@ -41,7 +46,11 @@ export async function POST(req: NextRequest) {
   try {
     await client.query('BEGIN');
     await client.query(`SET LOCAL ROLE ${getRolePg(rol)}`);
-    await client.query(`SET LOCAL app.current_vet_id = '${vetId}'`);
+
+    await client.query('SELECT set_config($1, $2, true)', [
+      'app.current_vet_id',
+      String(vetIdNum),
+    ]);
 
     await client.query(
       `INSERT INTO vacunas_aplicadas
